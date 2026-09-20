@@ -1,0 +1,26 @@
+# Project Context
+- Project Name: BMKG Padang Real-time Map Monitoring & Alert System
+- Domain: Disaster Mitigation, Meteorology, Climatology, and Geophysics (BMKG)
+- Target Region: Padang & West Sumatra, Indonesia
+
+# Tech Stack & Libraries
+- Framework: React.js (Vite)
+- Styling: Tailwind CSS
+- Mapping: Leaflet & react-leaflet
+- Icons: Lucide React
+- State Management: React Hooks (useState, useEffect, useMemo)
+
+# Code Quality & Architecture Standards
+- Component Structure: Write modular, clean, and reusable functional React components. Keep files small and separated by concern (e.g., MapComponent, Sidebar, DeviceList, StatCard).
+- Styling Rules: Use Tailwind CSS utility classes exclusively. Avoid raw CSS or inline styles except for dynamic UI properties like custom marker coordinates or dynamic colors.
+- Responsive Design: The UI must look professional like a command center dashboard, optimized for desktop screens with a collapsible or structured sidebar.
+- Status Indicators: Maintain consistent color semantics:
+  - Green (#10B981): Normal status / Active
+  - Yellow (#F59E0B): Warning / Delay / Minor anomaly
+  - Red (#EF4444): Offline / Critical emergency / Sensor failure
+
+# AI Behavior Guidelines for Cursor
+- When generating code, provide complete, production-ready, and working code blocks.
+- Prioritize clean error handling and fallback UI (e.g., when map tiles or device data fail to load).
+- Use English for code variables, functions, and comments, but keep UI labels, tooltips, and descriptions in Indonesian (per BMKG operational standards).
+- Always consider Leaflet container sizing issues (ensure map container has explicit width and height, e.g., h-screen or h-full with flexbox).
