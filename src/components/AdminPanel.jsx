@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   MapPinned,
   Megaphone,
@@ -6,22 +6,37 @@ import {
   PlugZap,
   Save,
   Settings2,
+  Siren,
   SlidersHorizontal,
+  ClipboardList,
+  SatelliteDish,
+  Archive,
   X,
 } from 'lucide-react';
 import { DEVICE_TYPES } from '../data/mockDevices';
 import { useTheme } from '../context/ThemeContext';
 import DeviceIntegrationPanel from './DeviceIntegrationPanel';
 import ThresholdEditor from './ThresholdEditor';
+import WorkOrderPanel from './WorkOrderPanel';
+import EscalationPolicyEditor from './EscalationPolicyEditor';
+import DeviceIngestWizard from './DeviceIngestWizard';
+import DataSourcePanel from './DataSourcePanel';
+import BackupRestorePanel from './BackupRestorePanel';
+import { getAdminTabsForRole } from '../data/users';
+import { useAuth } from '../context/AuthContext';
 
 const DEVICE_TYPE_OPTIONS = DEVICE_TYPES.filter((t) => t !== 'Semua');
 
 const TABS = [
-  { id: 'integrations', label: 'Integrasi', icon: PlugZap },
-  { id: 'thresholds', label: 'Threshold', icon: SlidersHorizontal },
-  { id: 'region', label: 'Wilayah', icon: MapPinned },
-  { id: 'devices', label: 'Perangkat', icon: Plus },
-  { id: 'broadcast', label: 'Broadcast', icon: Megaphone },
+  { id: 'integrations', label: 'Integrasi', short: 'Integrasi', icon: PlugZap },
+  { id: 'datasource', label: 'Sumber Data', short: 'Gateway', icon: SatelliteDish },
+  { id: 'thresholds', label: 'Threshold', short: 'Ambang', icon: SlidersHorizontal },
+  { id: 'escalation', label: 'Eskalasi', short: 'Eskalasi', icon: Siren },
+  { id: 'workorders', label: 'Work Order', short: 'WO', icon: ClipboardList },
+  { id: 'region', label: 'Wilayah', short: 'Wilayah', icon: MapPinned },
+  { id: 'devices', label: 'Perangkat', short: 'Device', icon: Plus },
+  { id: 'broadcast', label: 'Broadcast', short: 'Broadcast', icon: Megaphone },
+  { id: 'backup', label: 'Backup', short: 'Backup', icon: Archive },
 ];
 
 export default function AdminPanel({
@@ -43,10 +58,41 @@ export default function AdminPanel({
   thresholds,
   onSaveThresholds,
   onResetThresholds,
+  workOrders = [],
+  workOrderAssignees = [],
+  onUpdateWorkOrder,
+  onSetWorkOrderStatus,
+  onAssignWorkOrder,
+  onRemoveWorkOrder,
+  escalationPolicy,
+  escalationLogs = [],
+  onSaveEscalationPolicy,
+  onResetEscalationPolicy,
+  dataSourceMode,
+  dataSourceGatewayUrl,
+  dataSourceActiveWsUrl,
+  connectionStatus,
+  onSaveDataSource,
+  localDevices = [],
+  dataSourceConfig,
+  onBackupRestored,
 }) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const selected = regions.find((r) => r.id === selectedRegionId) ?? regions[0];
+
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => getAdminTabsForRole(user?.role).includes(tab.id)),
+    [user?.role],
+  );
+
   const [activeTab, setActiveTab] = useState('integrations');
+
+  useEffect(() => {
+    if (!visibleTabs.some((t) => t.id === activeTab)) {
+      setActiveTab(visibleTabs[0]?.id || 'workorders');
+    }
+  }, [visibleTabs, activeTab]);
 
   const [regionForm, setRegionForm] = useState({
     label: '',
@@ -194,50 +240,56 @@ export default function AdminPanel({
       <button type="button" className="flex-1 cursor-default" aria-label="Tutup panel" onClick={onClose} />
 
       <aside
-        className={`flex h-full w-full max-w-lg flex-col border-l shadow-2xl ${panelClass}`}
+        className={`flex h-full w-full max-w-xl flex-col border-l shadow-2xl ${panelClass}`}
       >
-        <div className="flex items-center justify-between border-b border-inherit px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-sky-500" />
-            <div>
+        <div className="flex shrink-0 items-center justify-between border-b border-inherit px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Settings2 className="h-4 w-4 shrink-0 text-sky-500" />
+            <div className="min-w-0">
               <h2 className="text-sm font-semibold">Panel Administrator</h2>
-              <p className="text-[11px] text-slate-500">
-                Integrasi, wilayah, perangkat & broadcast
+              <p className="truncate text-[11px] text-slate-500">
+                Integrasi · threshold · eskalasi · work order · wilayah
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-inherit p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="shrink-0 rounded-lg border border-inherit p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex gap-1 overflow-x-auto border-b border-inherit px-3 py-2">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition ${
-                  active
-                    ? 'bg-sky-600 text-white'
-                    : isDark
-                      ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                      : 'text-slate-500 hover:bg-gray-100 hover:text-slate-800'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <nav
+          aria-label="Menu administrator"
+          className="shrink-0 border-b border-inherit px-3 py-2"
+        >
+          <div className="grid grid-cols-4 gap-1">
+            {visibleTabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  title={tab.label}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`inline-flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition sm:flex-row sm:gap-1 sm:px-2 sm:text-[11px] ${
+                    active
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : isDark
+                        ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        : 'text-slate-500 hover:bg-gray-100 hover:text-slate-800'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="max-w-full truncate">{tab.short}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
         <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-4 py-4">
           {message && (
@@ -261,11 +313,44 @@ export default function AdminPanel({
             />
           )}
 
+          {activeTab === 'datasource' && (
+            <DataSourcePanel
+              mode={dataSourceMode}
+              gatewayUrl={dataSourceGatewayUrl}
+              activeWsUrl={dataSourceActiveWsUrl}
+              connectionStatus={connectionStatus}
+              onSave={onSaveDataSource}
+              isDark={isDark}
+            />
+          )}
+
           {activeTab === 'thresholds' && (
             <ThresholdEditor
               thresholds={thresholds}
               onSave={onSaveThresholds}
               onReset={onResetThresholds}
+              isDark={isDark}
+            />
+          )}
+
+          {activeTab === 'escalation' && (
+            <EscalationPolicyEditor
+              policy={escalationPolicy}
+              escalationLogs={escalationLogs}
+              onSave={onSaveEscalationPolicy}
+              onReset={onResetEscalationPolicy}
+              isDark={isDark}
+            />
+          )}
+
+          {activeTab === 'workorders' && (
+            <WorkOrderPanel
+              orders={workOrders}
+              assignees={workOrderAssignees}
+              onUpdate={onUpdateWorkOrder}
+              onSetStatus={onSetWorkOrderStatus}
+              onAssign={onAssignWorkOrder}
+              onRemove={onRemoveWorkOrder}
               isDark={isDark}
             />
           )}
@@ -334,6 +419,13 @@ export default function AdminPanel({
           )}
 
           {activeTab === 'devices' && (
+          <div className="space-y-5">
+          <DeviceIngestWizard
+            regions={regions}
+            selectedRegionId={selectedRegionId}
+            onAddDevice={onAddDevice}
+            isDark={isDark}
+          />
           <form onSubmit={handleAddDevice} className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <Plus className="h-3.5 w-3.5 text-emerald-500" />
@@ -426,6 +518,7 @@ export default function AdminPanel({
               Tambah Perangkat
             </button>
           </form>
+          </div>
           )}
 
           {activeTab === 'broadcast' && (
@@ -502,6 +595,21 @@ export default function AdminPanel({
               Simpan Broadcast Channel
             </button>
           </form>
+          )}
+
+          {activeTab === 'backup' && (
+            <BackupRestorePanel
+              regions={regions}
+              thresholds={thresholds}
+              integrations={integrations}
+              escalationPolicy={escalationPolicy}
+              broadcastChannels={broadcastChannels}
+              dataSourceConfig={dataSourceConfig}
+              localDevices={localDevices}
+              workOrders={workOrders}
+              onRestored={onBackupRestored}
+              isDark={isDark}
+            />
           )}
         </div>
       </aside>

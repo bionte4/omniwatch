@@ -4,11 +4,13 @@ import {
   CircleAlert,
   ChevronDown,
   ChevronUp,
+  ClipboardList,
   Download,
   Eraser,
   FileSpreadsheet,
   FileText,
   Radio,
+  Wrench,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { formatLastUpdate } from '../data/mockDevices';
@@ -29,6 +31,9 @@ export default function LiveAlertDrawer({
   lastSync,
   onClearAlerts,
   broadcastLogs = [],
+  onCreateWorkOrder,
+  workOrderOpenCount = 0,
+  wallMode = false,
 }) {
   const [expanded, setExpanded] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,6 +123,12 @@ export default function LiveAlertDrawer({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
             Live Alert Log
           </h2>
+          {workOrderOpenCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-md border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300">
+              <ClipboardList className="h-3 w-3" />
+              {workOrderOpenCount} WO
+            </span>
+          )}
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
@@ -203,7 +214,7 @@ export default function LiveAlertDrawer({
             onClick={onClearAlerts}
             disabled={!alerts.length}
             className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-[10px] font-medium text-slate-600 transition enabled:hover:border-red-300 enabled:hover:bg-red-50 enabled:hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:enabled:hover:border-red-500/40 dark:enabled:hover:bg-red-500/10 dark:enabled:hover:text-red-300"
-            title="Clear Log"
+            title="Clear Log (C)"
           >
             <Eraser className="h-3 w-3" />
             Clear Log
@@ -212,7 +223,11 @@ export default function LiveAlertDrawer({
       </div>
 
       {expanded && (
-        <div className="custom-scrollbar h-28 overflow-y-auto overscroll-contain px-3 py-2 md:h-32">
+        <div
+          className={`custom-scrollbar overflow-y-auto overscroll-contain px-3 py-2 ${
+            wallMode ? 'h-40 md:h-44' : 'h-28 md:h-32'
+          }`}
+        >
           {!alerts.length && !broadcastLogs.length ? (
             <div className="flex h-full items-center gap-2 text-xs text-slate-500">
               <CircleAlert className="h-3.5 w-3.5" />
@@ -269,6 +284,17 @@ export default function LiveAlertDrawer({
                   >
                     {alert.message}
                   </span>
+                  {alert.status === 'offline' && onCreateWorkOrder && (
+                    <button
+                      type="button"
+                      onClick={() => onCreateWorkOrder(alert)}
+                      title="Buat Work Order teknisi"
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-md border border-orange-300 bg-orange-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-orange-700 hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20"
+                    >
+                      <Wrench className="h-3 w-3" />
+                      WO
+                    </button>
+                  )}
                   <StatusBadge status={alert.status} size="xs" />
                 </li>
               ))}

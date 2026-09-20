@@ -1,10 +1,15 @@
 import {
   Activity,
+  Bell,
+  BellOff,
   CloudOff,
   Cloud,
   ChevronDown,
+  ClipboardList,
   LogOut,
   MapPinned,
+  Maximize2,
+  Minimize2,
   Moon,
   Radio,
   Settings2,
@@ -30,11 +35,19 @@ export default function Header({
   muted = false,
   onToggleMute,
   onOpenAdmin,
+  onOpenWorkOrders,
   onTestBroadcast,
   networkOnline = true,
+  workOrderOpenCount = 0,
+  wallMode = false,
+  onToggleWall,
+  notifyEnabled = false,
+  notifyPermission = 'default',
+  onToggleNotify,
+  onRequestNotify,
 }) {
   const { isDark, toggleTheme } = useTheme();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, can, roleLabel, logout } = useAuth();
   const isConnected = connectionStatus === 'connected';
   const isConnecting = connectionStatus === 'connecting';
 
@@ -87,12 +100,11 @@ export default function Header({
           dot: 'bg-red-400',
         };
 
-  const roleLabel =
-    user?.role === 'administrator' ? 'Administrator' : 'Operator';
-
   return (
     <header
-      className={`z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-3 transition-colors duration-300 md:px-5 ${
+      className={`z-30 flex shrink-0 items-center justify-between gap-3 border-b px-3 transition-colors duration-300 md:px-5 ${
+        wallMode ? 'h-12' : 'h-14'
+      } ${
         isDark
           ? 'border-slate-700/80 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950'
           : 'border-gray-200 bg-white'
@@ -144,6 +156,11 @@ export default function Header({
           >
             <ShieldCheck className={`h-3 w-3 ${isDark ? 'text-sky-400/80' : 'text-sky-500'}`} />
             {user?.displayName || user?.username} · {roleLabel}
+            {wallMode && (
+              <span className="ml-1 rounded border border-sky-500/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-400">
+                Wall Display
+              </span>
+            )}
           </p>
         </div>
       </div>
@@ -195,7 +212,7 @@ export default function Header({
           ))}
         </select>
 
-        {isAdmin && (
+        {can('openAdmin') && !wallMode && (
           <button
             type="button"
             onClick={onOpenAdmin}
@@ -211,6 +228,28 @@ export default function Header({
           </button>
         )}
 
+        {can('openWorkOrderPanel') && !can('openAdmin') && !wallMode && (
+          <button
+            type="button"
+            onClick={onOpenWorkOrders}
+            title="Work Order"
+            className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition ${
+              isDark
+                ? 'border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20'
+                : 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+            }`}
+          >
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden lg:inline">WO</span>
+            {workOrderOpenCount > 0 && (
+              <span className="rounded-md bg-orange-600 px-1 text-[9px] font-bold text-white">
+                {workOrderOpenCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        {can('testBroadcast') && !wallMode && (
         <button
           type="button"
           onClick={onTestBroadcast}
@@ -224,12 +263,63 @@ export default function Header({
           <Siren className="h-4 w-4" />
           <span className="hidden xl:inline">Test Broadcast</span>
         </button>
+        )}
 
+        <button
+          type="button"
+          onClick={onToggleWall}
+          title={wallMode ? 'Keluar wall display (F / Esc)' : 'Mode wall display (F)'}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition ${
+            wallMode
+              ? isDark
+                ? 'border-sky-400/50 bg-sky-500/20 text-sky-200'
+                : 'border-sky-300 bg-sky-100 text-sky-800'
+              : isDark
+                ? 'border-slate-700/80 bg-slate-900 text-slate-300 hover:border-slate-500'
+                : 'border-gray-200 bg-gray-50 text-slate-600 hover:border-sky-300'
+          }`}
+        >
+          {wallMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          <span className="hidden lg:inline">{wallMode ? 'Exit Wall' : 'Wall'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (notifyPermission !== 'granted') onRequestNotify?.();
+            else onToggleNotify?.();
+          }}
+          title={
+            notifyPermission !== 'granted'
+              ? 'Izinkan notifikasi desktop'
+              : notifyEnabled
+                ? 'Matikan notifikasi Offline'
+                : 'Aktifkan notifikasi Offline'
+          }
+          className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition ${
+            notifyEnabled && notifyPermission === 'granted'
+              ? isDark
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                : 'border-amber-200 bg-amber-50 text-amber-800'
+              : isDark
+                ? 'border-slate-700/80 bg-slate-900 text-slate-400 hover:border-slate-500'
+                : 'border-gray-200 bg-gray-50 text-slate-500 hover:border-amber-300'
+          }`}
+        >
+          {notifyEnabled && notifyPermission === 'granted' ? (
+            <Bell className="h-4 w-4" />
+          ) : (
+            <BellOff className="h-4 w-4" />
+          )}
+          <span className="hidden xl:inline">Notif</span>
+        </button>
+
+        {can('muteAlarm') && (
         <button
           type="button"
           onClick={onToggleMute}
           aria-label={muted ? 'Unmute alarm' : 'Mute alarm'}
-          title={muted ? 'Unmute Alarm' : 'Mute Alarm'}
+          title={muted ? 'Unmute Alarm (M)' : 'Mute Alarm (M)'}
           className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition duration-200 ${
             muted
               ? isDark
@@ -243,6 +333,7 @@ export default function Header({
           {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           <span className="hidden lg:inline">{muted ? 'Unmute' : 'Mute'}</span>
         </button>
+        )}
 
         <button
           type="button"

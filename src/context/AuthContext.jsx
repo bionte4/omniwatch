@@ -1,5 +1,12 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { authenticate, isAdmin, ROLES } from '../data/users';
+import {
+  ROLES,
+  authenticate,
+  getRoleLabel,
+  hasPermission,
+  isAdmin,
+  isStationAdmin,
+} from '../data/users';
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = 'omniwatch-auth-session';
@@ -49,17 +56,28 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const can = useCallback(
+    (permission) => hasPermission(user, permission),
+    [user],
+  );
+
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: Boolean(user),
       isAdmin: isAdmin(user),
+      isStationAdmin: isStationAdmin(user),
       isOperator: user?.role === ROLES.OPERATOR,
+      isTechnician: user?.role === ROLES.TECHNICIAN,
+      isViewer: user?.role === ROLES.VIEWER,
+      roleLabel: getRoleLabel(user?.role),
+      stationId: user?.stationId ?? null,
+      can,
       login,
       logout,
       ROLES,
     }),
-    [user, login, logout],
+    [user, can, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

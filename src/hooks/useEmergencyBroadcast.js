@@ -90,12 +90,30 @@ export default function useEmergencyBroadcast() {
   }, []);
 
   const simulateBroadcast = useCallback(
-    (payload, { force = false } = {}) => {
+    (payload, { force = false, channelsOnly = null } = {}) => {
       if (!force && !channels.autoBroadcast) {
         return [];
       }
 
-      const entries = buildMessages(channels, payload);
+      let entries = buildMessages(channels, payload);
+      if (channelsOnly?.length) {
+        const allow = new Set(channelsOnly);
+        entries = entries.filter((e) => allow.has(e.channel));
+        if (!entries.length) {
+          entries = [
+            {
+              channel: channelsOnly[0],
+              target:
+                channelsOnly[0] === 'telegram'
+                  ? channels.telegramTarget
+                  : channels.whatsappTarget,
+              message: `Pesan terkirim via ${channelsOnly[0] === 'telegram' ? 'Telegram' : 'WhatsApp'} (escalation)`,
+              detail: `[Escalation] ${payload.reason || payload.deviceName || ''}`,
+            },
+          ];
+        }
+      }
+
       const stamped = entries.map((entry) => ({
         id: `bc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         timestamp: new Date().toISOString(),
@@ -108,6 +126,23 @@ export default function useEmergencyBroadcast() {
       return stamped;
     },
     [channels],
+  );
+
+  /** Fire a single simulated channel (used by escalation policy). */
+  const simulateChannel = useCallback(
+    (payload) => {
+      const channel = payload.channel === 'whatsapp' ? 'whatsapp' : 'telegram';
+      return simulateBroadcast(
+        {
+          deviceName: payload.deviceName,
+          deviceId: payload.deviceId,
+          status: payload.status,
+          reason: payload.reason,
+        },
+        { force: true, channelsOnly: [channel] },
+      );
+    },
+    [simulateBroadcast],
   );
 
   const testBroadcast = useCallback(() => {
@@ -123,18 +158,18 @@ export default function useEmergencyBroadcast() {
   }, [simulateBroadcast]);
 
   /**
-   * Auto-fire once per alert id for offline / critical warning.
+   * Legacy auto-broadcast — disabled when escalation engine handles routing.
+   * Kept for Test Broadcast + manual force.
    */
   const processAlertBroadcasts = useCallback(
-    (alerts = []) => {
-      if (!channels.autoBroadcast) return;
+    (alerts = [], { skip = false } = {}) => {
+      if (skip || !channels.autoBroadcast) return;
 
       alerts.forEach((alert) => {
         if (!alert?.id) return;
         if (sentAlertIdsRef.current.has(alert.id)) return;
         if (alert.status !== 'offline' && alert.status !== 'warning') return;
 
-        // Offline = always; warning treated as critical anomaly
         sentAlertIdsRef.current.add(alert.id);
         simulateBroadcast({
           deviceName: alert.deviceName,
@@ -159,6 +194,7 @@ export default function useEmergencyBroadcast() {
     saveChannels,
     broadcastLogs,
     simulateBroadcast,
+    simulateChannel,
     testBroadcast,
     processAlertBroadcasts,
     clearBroadcastLogs,

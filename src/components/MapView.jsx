@@ -4,6 +4,8 @@ import {
   TileLayer,
   Marker,
   Popup,
+  Circle,
+  GeoJSON,
   useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -13,9 +15,16 @@ import {
   STATUS_META,
   formatLastUpdate,
 } from '../data/mockDevices';
+import {
+  DEFAULT_LAYER_VISIBILITY,
+  EVACUATION_ROUTES,
+  HAZARD_ZONES,
+  RADIO_COVERAGE,
+} from '../data/mapLayers';
 import { useTheme } from '../context/ThemeContext';
 import { DeviceTypeIcon, getDeviceTint } from './DeviceTypeIcon';
 import StatusBadge from './StatusBadge';
+import MapLayerControls from './MapLayerControls';
 
 const TILE_LAYERS = {
   light: {
@@ -87,6 +96,19 @@ function MapRegionView({ region }) {
   return null;
 }
 
+function MapInvalidateOnLayout({ wallMode }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      map.invalidateSize({ animate: false });
+    }, 120);
+    return () => window.clearTimeout(id);
+  }, [wallMode, map]);
+
+  return null;
+}
+
 function MapFallback() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gray-100 text-center dark:bg-slate-950">
@@ -110,6 +132,9 @@ export default function MapView({
   onSelectDevice,
   region,
   timelineActive = false,
+  layerVisibility = DEFAULT_LAYER_VISIBILITY,
+  onToggleLayer,
+  wallMode = false,
 }) {
   const { isDark, theme } = useTheme();
   const tile = TILE_LAYERS[theme] ?? TILE_LAYERS.light;
@@ -128,6 +153,26 @@ export default function MapView({
     };
     return { base, highlighted };
   }, [isDark]);
+
+  const hazardStyle = useMemo(
+    () => ({
+      color: '#EF4444',
+      weight: 1.5,
+      fillColor: '#EF4444',
+      fillOpacity: 0.18,
+    }),
+    [],
+  );
+
+  const evacStyle = useMemo(
+    () => ({
+      color: '#F59E0B',
+      weight: 3,
+      opacity: 0.9,
+      dashArray: '8 6',
+    }),
+    [],
+  );
 
   if (!devices) {
     return <MapFallback />;
@@ -149,6 +194,8 @@ export default function MapView({
           </p>
         )}
       </div>
+
+      <MapLayerControls visibility={layerVisibility} onToggle={onToggleLayer} />
 
       <div className="pointer-events-none absolute bottom-24 right-3 z-[1000] rounded-xl border border-gray-200 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/90 dark:shadow-xl">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
@@ -186,6 +233,48 @@ export default function MapView({
 
         <MapRegionView region={region} />
         <MapFocus device={selectedDevice} />
+        <MapInvalidateOnLayout wallMode={wallMode} />
+
+        {layerVisibility.hazard && (
+          <GeoJSON
+            key={`hazard-${theme}`}
+            data={HAZARD_ZONES}
+            style={hazardStyle}
+            onEachFeature={(feature, layer) => {
+              const name = feature?.properties?.name;
+              if (name) layer.bindPopup(name);
+            }}
+          />
+        )}
+
+        {layerVisibility.evac && (
+          <GeoJSON
+            key={`evac-${theme}`}
+            data={EVACUATION_ROUTES}
+            style={evacStyle}
+            onEachFeature={(feature, layer) => {
+              const name = feature?.properties?.name;
+              if (name) layer.bindPopup(name);
+            }}
+          />
+        )}
+
+        {layerVisibility.radio &&
+          RADIO_COVERAGE.map((cell) => (
+            <Circle
+              key={cell.id}
+              center={cell.center}
+              radius={cell.radius}
+              pathOptions={{
+                color: '#0EA5E9',
+                weight: 1.5,
+                fillColor: '#0EA5E9',
+                fillOpacity: 0.12,
+              }}
+            >
+              <Popup>{cell.name}</Popup>
+            </Circle>
+          ))}
 
         {devices.map((device) => {
           const isHighlighted =

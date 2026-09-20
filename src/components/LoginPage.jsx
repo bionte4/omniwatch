@@ -67,7 +67,7 @@ export default function LoginPage() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin atau operator"
+                placeholder="admin / teknisi / viewer…"
                 className={`w-full rounded-xl border py-2.5 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-sky-400/40 ${
                   isDark
                     ? 'border-slate-700 bg-slate-950 text-slate-100 placeholder:text-slate-600'
@@ -131,19 +131,16 @@ export default function LoginPage() {
               : 'border-gray-200 bg-gray-50 text-slate-500'
           }`}
         >
-          <p className="mb-1 font-semibold text-slate-600 dark:text-slate-300">
-            Akun demo
+          <p className="mb-1.5 font-semibold text-slate-600 dark:text-slate-300">
+            Akun demo (RBAC)
           </p>
-          <p>
-            Administrator: <code className="font-mono">admin / admin</code>
-          </p>
-          <p>
-            Operator: <code className="font-mono">operator / operator</code>
-          </p>
-          <p className="mt-2">
-            Operator: pantau peta, alert, mute alarm. Administrator: + tambah
-            perangkat & konfigurasi wilayah.
-          </p>
+          <ul className="space-y-1 font-mono text-[10px]">
+            <li>admin / admin — Administrator</li>
+            <li>adminpdg / adminpdg — Admin Stasiun</li>
+            <li>teknisi / teknisi — Teknisi</li>
+            <li>operator / operator — Operator Piket</li>
+            <li>viewer / viewer — Viewer (pantau saja)</li>
+          </ul>
         </div>
       </div>
     </div>
