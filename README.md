@@ -4,6 +4,18 @@ Dashboard **command center** white-label untuk monitoring perangkat BMKG (seismo
 
 Stack: **React (Vite) · Tailwind CSS · Leaflet · WebSocket · Nginx · Docker**
 
+## Dokumentasi
+
+Dokumentasi lengkap ada di folder [`docs/`](./docs/README.md):
+
+- [Arsitektur](./docs/architecture.md)
+- [Fitur](./docs/features.md)
+- [RBAC & akun](./docs/rbac.md)
+- [Operasional piket](./docs/operations.md) (wall, hotkey, notifikasi, WO)
+- [Integrasi & data](./docs/integrations.md)
+- [WebSocket API](./docs/websocket.md)
+- [Deployment](./docs/deployment.md)
+
 ---
 
 ## Fitur utama
@@ -14,11 +26,13 @@ Stack: **React (Vite) · Tailwind CSS · Leaflet · WebSocket · Nginx · Docker
 | Multi-region | Filter stasiun + opsi **Semua Stasiun** |
 | Live alert | Drawer log kejadian + siren suara (mute/unmute) |
 | WebSocket | Sinkronisasi status perangkat tanpa refresh |
-| Auth & RBAC | Login Operator / Administrator |
-| Admin panel | Integrasi MQTT/HTTP, threshold, wilayah, perangkat, broadcast |
+| Auth & RBAC | Viewer, Operator, Teknisi, Admin Stasiun, Administrator |
+| Admin panel | Integrasi, gateway, threshold, eskalasi, WO, wilayah, perangkat, backup |
 | SLA / Uptime | Kartu uptime 24 jam & 7 hari per stasiun |
 | Telemetri | Modal grafik tren + reminder kalibrasi |
 | Timeline playback | Scrub 24 jam terakhir |
+| Work order & eskalasi | Tiket teknisi; Warning→Telegram, Offline lama→WhatsApp |
+| Wall / hotkey | Mode ruang kontrol + pintasan keyboard |
 | Export laporan | CSV / teks incident |
 | PWA + offline | Installable, cache perangkat & tile peta |
 | Docker | Frontend + backend siap VPS / on-premise |
@@ -61,10 +75,13 @@ Di production, URL WebSocket mengikuti origin browser (`ws://host/ws` atau `wss:
 
 | Username | Password | Role |
 |----------|----------|------|
-| `admin` | `admin` | Administrator (konfigurasi, integrasi, perangkat) |
-| `operator` | `operator` | Operator (pantau peta, alert, mute) |
+| `admin` | `admin` | Administrator |
+| `adminpdg` | `adminpdg` | Admin Stasiun |
+| `teknisi` | `teknisi` | Teknisi |
+| `operator` | `operator` | Operator Piket |
+| `viewer` | `viewer` | Viewer |
 
-> Ganti kredensial sebelum dipakai operasional nyata (`src/data/users.js`).
+Detail permission: [docs/rbac.md](./docs/rbac.md). Ganti kredensial sebelum produksi (`src/data/users.js`).
 
 ---
 
